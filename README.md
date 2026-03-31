@@ -1,12 +1,6 @@
 <div align="center">
-
-```
-     _____ __          __  __           
-    / ___// /_  ____ _/ /_/ /____  _____
-    \__ \/ __ \/ __ `/ __/ __/ _ \/ ___/
-   ___/ / / / / /_/ / /_/ /_/  __/ /    
-  /____/_/ /_/\__,_/\__/\__/\___/_/     
-```
+     
+<img width="1280" height="318" alt="Gemini_Generated_Image_rj2u2qrj2u2qrj2u (1) (Custom)" src="https://github.com/user-attachments/assets/3cb94e1d-08ba-436b-b347-362cb00b481c" />
 
 **Recursively find and obliterate build caches & dependency bloat.**
 
@@ -163,3 +157,10 @@ That's it. No other files need to change.
 ## License
 
 MIT © 2024
+
+## Screenshots
+
+<img width="811" height="380" alt="Antigravity_YXlYhz6RGP" src="https://github.com/user-attachments/assets/11c93f6f-a002-4649-b23b-f2c72682318e" />
+<img width="975" height="242" alt="Antigravity_Cvhe8yfEf2" src="https://github.com/user-attachments/assets/0882c89f-7eb9-42f6-8a6d-aac26a77f5c6" />
+
+
