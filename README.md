@@ -17,12 +17,12 @@ Built for developers working across multiple languages, `shatter` replaces a doz
 
 ## Why `shatter`?
 
-| Feature | `shatter` | `npkill` | `find / rm` |
-| :--- | :---: | :---: | :---: |
-| **Multi-Ecosystem** | ✅ (Rust, Python, JS, Go, etc.) | ❌ (JS only) | ❌ (Manual setup) |
-| **Safety Guardrails** | ✅ (`.shatterignore`, dry-runs) | ❌ | ❌ |
-| **Parallel Execution** | ✅ (Threaded size calculation) | ❌ | ❌ |
-| **CI/CD Ready** | ✅ (Standard exit codes, `--yes`) | ❌ (Interactive focus) | ✅ |
+| Feature                |            `shatter`             |       `npkill`        |   `find / rm`    |
+| :--------------------- | :------------------------------: | :-------------------: | :--------------: |
+| **Multi-Ecosystem**    |  ✅ (Rust, Python, JS, Go, etc.)  |      ❌ (JS only)      | ❌ (Manual setup) |
+| **Safety Guardrails**  |  ✅ (`.shatterignore`, dry-runs)  |           ❌           |        ❌         |
+| **Parallel Execution** |  ✅ (Threaded size calculation)   |           ❌           |        ❌         |
+| **CI/CD Ready**        | ✅ (Standard exit codes, `--yes`) | ❌ (Interactive focus) |        ✅         |
 
 ## Core Features
 
@@ -81,30 +81,31 @@ shatter ~/projects --all --yes
 
 ## CLI Options
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--cache` | `-c` | Target build cache directories only |
-| `--deps` | `-d` | Target dependency directories only |
-| `--all` | `-a` | Target both caches and deps |
-| `--dry-run` | `-n` | Scan and report only — performs no disk mutations |
-| `--fast` | `-f` | Skip parallel size calculation for immediate execution |
-| `--verbose` | `-v` | Group output by project root with localized size subtotals |
-| `--yes` | `-y` | Bypass interactive confirmation prompts |
+| Flag           | Short | Description                                                                          |
+| -------------- | ----- | ------------------------------------------------------------------------------------ |
+| `--cache`      | `-c`  | Target build cache directories only                                                  |
+| `--deps`       | `-d`  | Target dependency directories only                                                   |
+| `--all`        | `-a`  | Target both caches and deps                                                          |
+| `--dry-run`    | `-n`  | Scan and report only — performs no disk mutations                                    |
+| `--fast`       | `-f`  | Skip parallel size calculation for immediate execution                               |
+| `--verbose`    | `-v`  | Group output by project root with localized size subtotals                           |
+| `--yes`        | `-y`  | Bypass interactive confirmation prompts                                              |
+| `--older-than` | `-o`  | Only target dirs not modified within the given period (e.g. `30d`, `2w`, `3m`, `1y`) |
 
 ## Supported Ecosystems
 
-| Ecosystem | Caches | Dependencies |
-|-----------|--------|-------------|
-| **JavaScript** | `.next` `.nuxt` `.svelte-kit` `.swc` `.turbo` `.parcel-cache` | `node_modules` |
-| **Python** | `__pycache__` `.pytest_cache` `.mypy_cache` `.ruff_cache` `.pytype` | `.venv` `venv` `.tox` `.nox` |
-| **Rust** | — | `target` |
-| **Go** | — | `vendor` |
-| **PHP** | — | `vendor` |
-| **Ruby** | — | `vendor/bundle` |
-| **Java / Kotlin** | `.gradle` `build` | — |
-| **.NET / C#** | `bin` `obj` | — |
-| **Expo** | `.expo` | — |
-| **Dart / Flutter** | `.dart_tool` `build` | — |
+| Ecosystem          | Caches                                                              | Dependencies                 |
+| ------------------ | ------------------------------------------------------------------- | ---------------------------- |
+| **JavaScript**     | `.next` `.nuxt` `.svelte-kit` `.swc` `.turbo` `.parcel-cache`       | `node_modules`               |
+| **Python**         | `__pycache__` `.pytest_cache` `.mypy_cache` `.ruff_cache` `.pytype` | `.venv` `venv` `.tox` `.nox` |
+| **Rust**           | —                                                                   | `target`                     |
+| **Go**             | —                                                                   | `vendor`                     |
+| **PHP**            | —                                                                   | `vendor`                     |
+| **Ruby**           | —                                                                   | `vendor/bundle`              |
+| **Java / Kotlin**  | `.gradle` `build`                                                   | —                            |
+| **.NET / C#**      | `bin` `obj`                                                         | —                            |
+| **Expo**           | `.expo`                                                             | —                            |
+| **Dart / Flutter** | `.dart_tool` `build`                                                | —                            |
 
 ## Protecting Critical Paths
 
@@ -122,37 +123,50 @@ touch ~/projects/legacy-api/.shatterignore
 
 ## Architecture & Extensibility
 
-`shatter` is built to be easily extensible. You can add support for new languages or frameworks without modifying the core traversal or deletion logic.
+`shatter` is built to be easily extensible. You can add support for new languages or frameworks without touching the source code at all.
 
 ```text
 shatter/
 ├── __init__.py       # package versioning
 ├── __main__.py       # execution entry point
-├── targets.py        # ← ADD NEW ECOSYSTEMS HERE
+├── targets.py        # ecosystem loader (reads ~/.shatter)
 ├── scanner.py        # core BFS walk + threaded size engine
 └── cli.py            # terminal UI and argument parsing
 ```
 
-### Adding a New Ecosystem
+### User Config — `~/.shatter`
 
-Open `shatter/targets.py` and append your target to the `ECOSYSTEMS` list:
+On first run, `shatter` creates `~/.shatter` in your home directory populated with all built-in ecosystem definitions. Open it with any text editor to customise targets:
 
-```python
-Ecosystem(
-    name="Zig",
-    caches=[".zig-cache"],
-    deps=[],
-),
+```json
+{
+  "ECOSYSTEMS": [
+    {
+      "name": "JavaScript",
+      "caches": [".next", ".nuxt", "dist", "build"],
+      "deps": ["node_modules", "bower_components"]
+    },
+    {
+      "name": "Python",
+      "caches": ["__pycache__", ".pytest_cache", ".mypy_cache"],
+      "deps": [".venv", "venv", ".tox"]
+    }
+  ]
+}
 ```
 
-The core scanner will automatically pick up the new rules on the next run.
+- **Add** a new object to the `ECOSYSTEMS` array to support a new language.
+- **Remove** any entry you don't want scanned.
+- **Customise** `caches` or `deps` arrays to match your workflow.
+
+Changes take effect on the next run — no reinstall needed. If the file is deleted or becomes malformed, `shatter` will recreate it with the built-in defaults.
 
 ## Contributing
 
 We welcome pull requests for new ecosystems, bug fixes, or performance optimizations. 
 
 1. Fork the repository.
-2. If adding an ecosystem, update `targets.py`.
+2. If adding a built-in ecosystem default, update `_DEFAULT_ECOSYSTEMS` in `targets.py`.
 3. Submit a PR with a brief description and a reference link confirming the standard directory names for that ecosystem.
 
 ## License

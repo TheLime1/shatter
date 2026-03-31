@@ -1,13 +1,22 @@
 """
 targets.py — Ecosystem target registry.
 
-To add a new ecosystem, simply append a new entry to ECOSYSTEMS.
-The core engine reads from this registry — no other files need to change.
+Built-in defaults are written to ~/.shatter on first run.
+Users can freely edit that file to add, remove, or customise ecosystems.
+The core engine reads exclusively from that config — no source edits required.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
+
+CONFIG_PATH: Path = Path.home() / ".shatter"
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Data model
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,11 +28,11 @@ class Ecosystem:
     deps: list[str] = field(default_factory=list)
 
 
-# ──────────────────────────────────────────────
-#  REGISTRY — add new ecosystems here
-# ──────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+#  Built-in defaults  (written to ~/.shatter on first run)
+# ──────────────────────────────────────────────────────────────────────────────
 
-ECOSYSTEMS: list[Ecosystem] = [
+_DEFAULT_ECOSYSTEMS: list[Ecosystem] = [
     # ── JavaScript / TypeScript ────────────────
     Ecosystem(
         name="JavaScript",
@@ -65,7 +74,8 @@ ECOSYSTEMS: list[Ecosystem] = [
             "build",
             "dist",
         ],
-        deps=[".venv", "venv", "env", "virtualenv", ".tox", ".nox", "__pypackages__"],
+        deps=[".venv", "venv", "env", "virtualenv",
+              ".tox", ".nox", "__pypackages__"],
     ),
     # ── Rust ───────────────────────────────────
     Ecosystem(
@@ -184,7 +194,8 @@ ECOSYSTEMS: list[Ecosystem] = [
     ),
     Ecosystem(
         name="Unreal Engine",
-        caches=["Binaries", "Build", "DerivedDataCache", "Intermediate", "Saved"],
+        caches=["Binaries", "Build", "DerivedDataCache",
+                "Intermediate", "Saved"],
         deps=[],
     ),
     # ── Data Science / R ───────────────────────
@@ -194,6 +205,65 @@ ECOSYSTEMS: list[Ecosystem] = [
         deps=["renv"],
     ),
 ]
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Config helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _ecosystems_to_json(ecosystems: list[Ecosystem]) -> dict:
+    return {
+        "ECOSYSTEMS": [
+            {"name": e.name, "caches": list(e.caches), "deps": list(e.deps)}
+            for e in ecosystems
+        ]
+    }
+
+
+def _json_to_ecosystems(data: dict) -> list[Ecosystem]:
+    return [
+        Ecosystem(
+            name=entry["name"],
+            caches=list(entry.get("caches", [])),
+            deps=list(entry.get("deps", [])),
+        )
+        for entry in data.get("ECOSYSTEMS", [])
+    ]
+
+
+def _ensure_config() -> None:
+    """Write the default config to ~/.shatter if it does not already exist."""
+    if not CONFIG_PATH.exists():
+        CONFIG_PATH.write_text(
+            json.dumps(_ecosystems_to_json(_DEFAULT_ECOSYSTEMS), indent=2),
+            encoding="utf-8",
+        )
+
+
+def load_ecosystems() -> list[Ecosystem]:
+    """
+    Return the list of Ecosystem objects from ~/.shatter.
+
+    If the file does not exist it is created with the built-in defaults first.
+    Falls back to the built-in defaults if the file is malformed.
+    """
+    _ensure_config()
+    try:
+        data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        ecosystems = _json_to_ecosystems(data)
+        if not ecosystems:
+            raise ValueError("empty ECOSYSTEMS list")
+        return ecosystems
+    except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        return list(_DEFAULT_ECOSYSTEMS)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Module-level sets consumed by scanner.py
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Populated at import time from the user config / defaults.
+ECOSYSTEMS: list[Ecosystem] = load_ecosystems()
 
 
 def _collect(attr: str) -> set[str]:
