@@ -84,10 +84,10 @@ shatter init
 
 ## CLI Commands
 
-| Command         | Description                                                         |
-| --------------- | ------------------------------------------------------------------- |
-| `shatter [PATH]` | Scan and optionally delete targets under `PATH` (default: `.`)     |
-| `shatter init`  | (Re)write `~/.shatter` with all built-in ecosystem defaults        |
+| Command          | Description                                                    |
+| ---------------- | -------------------------------------------------------------- |
+| `shatter [PATH]` | Scan and optionally delete targets under `PATH` (default: `.`) |
+| `shatter init`   | (Re)write `~/.shatter` with all built-in ecosystem defaults    |
 
 ## CLI Options
 
