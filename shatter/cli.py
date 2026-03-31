@@ -12,6 +12,7 @@ from rich import box
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn
 from rich.spinner import Spinner
 from rich.table import Table
 from rich.text import Text
@@ -74,7 +75,8 @@ class LiveSpinner:
         return t
 
     def __enter__(self) -> "LiveSpinner":
-        self._live = Live(self._render(), console=console, refresh_per_second=12, transient=True)
+        self._live = Live(self._render(), console=console,
+                          refresh_per_second=12, transient=True)
         self._live.__enter__()
 
         def _loop() -> None:
@@ -119,7 +121,8 @@ def _flat_table(result: ScanResult, fast: bool = False) -> Table:
     table.add_column("#", style="dim", width=4, justify="right")
     table.add_column("Directory", style="bright_white", min_width=42)
     table.add_column("Type", justify="center", width=10)
-    table.add_column(size_header, justify="right", style="bold bright_yellow", width=12)
+    table.add_column(size_header, justify="right",
+                     style="bold bright_yellow", width=12)
 
     targets = (
         result.targets
@@ -145,18 +148,21 @@ def _verbose_table(result: ScanResult, fast: bool = False) -> Table:
     )
     table.add_column("Project / Directory", style="bright_white", min_width=50)
     table.add_column("Type", justify="center", width=10)
-    table.add_column("Size" if not fast else "Dirs", justify="right", style="bold bright_yellow", width=12)
+    table.add_column("Size" if not fast else "Dirs",
+                     justify="right", style="bold bright_yellow", width=12)
 
     groups = result.by_project()
     sorted_groups = sorted(
         groups.items(),
-        key=lambda kv: sum(t.size_bytes for t in kv[1]) if not fast else len(kv[1]),
+        key=lambda kv: sum(
+            t.size_bytes for t in kv[1]) if not fast else len(kv[1]),
         reverse=True,
     )
 
     for proj_root, targets in sorted_groups:
         proj_label = proj_root.name if proj_root else "(no project)"
-        proj_summary = f"{len(targets)} dir(s)" if fast else format_size(sum(t.size_bytes for t in targets))
+        proj_summary = f"{len(targets)} dir(s)" if fast else format_size(
+            sum(t.size_bytes for t in targets))
 
         table.add_row(
             Text(f"📁 {proj_label}", style="bold bright_cyan"),
@@ -164,7 +170,8 @@ def _verbose_table(result: ScanResult, fast: bool = False) -> Table:
             Text(proj_summary, style="bold bright_cyan"),
         )
 
-        row_targets = targets if fast else sorted(targets, key=lambda x: x.size_bytes, reverse=True)
+        row_targets = targets if fast else sorted(
+            targets, key=lambda x: x.size_bytes, reverse=True)
         for t in row_targets:
             try:
                 rel = t.path.relative_to(proj_root) if proj_root else t.path
@@ -182,12 +189,14 @@ def _verbose_table(result: ScanResult, fast: bool = False) -> Table:
 def _totals_panel(result: ScanResult, dry_run: bool, fast: bool = False) -> Panel:
     lines: list[str] = []
     n_cache = sum(1 for t in result.targets if t.kind == "cache")
-    n_dep   = sum(1 for t in result.targets if t.kind == "dep")
+    n_dep = sum(1 for t in result.targets if t.kind == "dep")
     if fast:
         if n_cache:
-            lines.append(f"[dark_orange3]🗑  Caches:[/dark_orange3]  [bold]{n_cache} dir(s)[/bold]")
+            lines.append(
+                f"[dark_orange3]🗑  Caches:[/dark_orange3]  [bold]{n_cache} dir(s)[/bold]")
         if n_dep:
-            lines.append(f"[blue]📦 Deps:[/blue]     [bold]{n_dep} dir(s)[/bold]")
+            lines.append(
+                f"[blue]📦 Deps:[/blue]     [bold]{n_dep} dir(s)[/bold]")
         lines.append("")
         lines.append(
             f"[bright_magenta]💎 Total:[/bright_magenta]    "
@@ -210,7 +219,8 @@ def _totals_panel(result: ScanResult, dry_run: bool, fast: bool = False) -> Pane
         )
     if dry_run:
         lines.append("")
-        lines.append("[dim italic]  ↑ Nothing was deleted (dry run)[/dim italic]")
+        lines.append(
+            "[dim italic]  ↑ Nothing was deleted (dry run)[/dim italic]")
     return Panel(
         "\n".join(lines),
         title="[bold bright_white]Summary[/bold bright_white]",
@@ -231,10 +241,14 @@ def shatter(
         file_okay=False,
         resolve_path=True,
     ),
-    cache: bool = typer.Option(False, "--cache", "-c", help="Only target build caches."),
-    deps: bool = typer.Option(False, "--deps", "-d", help="Only target dependency directories."),
-    all_: bool = typer.Option(False, "--all", "-a", help="Target both caches and deps."),
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Scan only — don't delete anything."),
+    cache: bool = typer.Option(
+        False, "--cache", "-c", help="Only target build caches."),
+    deps: bool = typer.Option(False, "--deps", "-d",
+                              help="Only target dependency directories."),
+    all_: bool = typer.Option(False, "--all", "-a",
+                              help="Target both caches and deps."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Scan only — don't delete anything."),
     verbose: bool = typer.Option(
         False, "--verbose", "-v",
         help="Show per-project size breakdown grouped by project root."
@@ -243,7 +257,8 @@ def shatter(
         False, "--fast", "-f",
         help="Skip size calculation — instant results, no byte totals."
     ),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt."),
+    yes: bool = typer.Option(False, "--yes", "-y",
+                             help="Skip confirmation prompt."),
 ) -> None:
     """
     [bright_magenta]🔨 shatter[/bright_magenta] — Obliterate build caches & dependency bloat.
@@ -262,7 +277,8 @@ def shatter(
         )
         raise typer.Exit(1)
     if selected > 1:
-        console.print("[red]✗  Please use only one of --cache, --deps, or --all.[/red]\n")
+        console.print(
+            "[red]✗  Please use only one of --cache, --deps, or --all.[/red]\n")
         raise typer.Exit(1)
 
     mode = "cache" if cache else ("deps" if deps else "all")
@@ -278,7 +294,7 @@ def shatter(
                 mode=mode,
                 console=console,
                 fast=fast,
-                on_visit=lambda p: spinner.set_status(str(p)),
+                on_visit=lambda p: spinner.set_status(f"Scanning  {p.name}"),
                 on_size_progress=(
                     None if fast
                     else lambda t: spinner.set_status(
@@ -295,18 +311,29 @@ def shatter(
 
     # ── empty ────────────────────────────────────
     if not result.targets:
-        console.print(
-            Panel(
-                "[bright_green]✨ Nothing to clean — your project tree is spotless![/bright_green]",
-                border_style="green",
-                padding=(1, 2),
+        if path in result.skipped:
+            console.print(
+                Panel(
+                    f"[bold yellow]🛡  Repo protected by .shatterignore[/bold yellow]\n"
+                    f"[dim]{path} is shielded — nothing was scanned.[/dim]",
+                    border_style="yellow",
+                    padding=(1, 2),
+                )
             )
-        )
+        else:
+            console.print(
+                Panel(
+                    "[bright_green]✨ Nothing to clean — your project tree is spotless![/bright_green]",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+            )
         raise typer.Exit(0)
 
     # ── results ──────────────────────────────────
     console.print()
-    table = _verbose_table(result, fast=fast) if verbose else _flat_table(result, fast=fast)
+    table = _verbose_table(
+        result, fast=fast) if verbose else _flat_table(result, fast=fast)
     console.print(table)
     console.print()
     console.print(_totals_panel(result, dry_run, fast=fast))
@@ -327,8 +354,22 @@ def shatter(
             raise typer.Exit(0)
 
     console.print()
-    with LiveSpinner("Deleting…", style="bright_red"):
-        removed = delete_targets(result.targets, console)
+    with Progress(
+        SpinnerColumn(style="bright_red"),
+        TextColumn("[bold bright_red]Deleting[/bold bright_red]"),
+        BarColumn(bar_width=40, style="dim red", complete_style="bright_red"),
+        MofNCompleteColumn(),
+        TextColumn("[dim]{task.fields[name]}[/dim]"),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("delete", total=len(result.targets), name="")
+
+        def _on_progress(t: FoundTarget) -> None:
+            progress.update(task, advance=1, name=t.path.name)
+
+        removed = delete_targets(
+            result.targets, console, on_progress=_on_progress)
 
     console.print(
         Panel(

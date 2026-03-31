@@ -23,7 +23,8 @@ from rich.console import Console
 from .targets import ALL_CACHE_DIRS, ALL_DEP_DIRS
 
 IGNORE_FILE = ".shatterignore"
-MAX_PROJECT_DEPTH = 4   # levels deep inside a project root (.git sibling) to scan
+# levels deep inside a project root (.git sibling) to scan
+MAX_PROJECT_DEPTH = 4
 MAX_WORKERS = 16        # parallel threads for size calculation
 
 TargetKind = Literal["cache", "dep"]
@@ -130,8 +131,18 @@ def _walk(
     result = ScanResult()
     resolved_root = root.resolve()
 
+    # .shatterignore guard for the root itself — bail out immediately
+    if (resolved_root / IGNORE_FILE).exists():
+        result.skipped.append(resolved_root)
+        console.print(
+            f"  [bold yellow]🛡  {resolved_root.name}[/bold yellow] "
+            f"[dim]is protected by .shatterignore — skipping entirely[/dim]"
+        )
+        return result
+
     # (path, project_root, remaining_depth)
-    stack: list[tuple[Path, Path | None, int | None]] = [(resolved_root, None, None)]
+    stack: list[tuple[Path, Path | None, int | None]] = [
+        (resolved_root, None, None)]
 
     while stack:
         current, proj_root, remaining = stack.pop()
@@ -139,7 +150,7 @@ def _walk(
         if on_visit:
             on_visit(current)
 
-        # .shatterignore guard
+        # .shatterignore guard for subdirectories
         if (current / IGNORE_FILE).exists() and current != resolved_root:
             result.skipped.append(current)
             console.print(
@@ -242,7 +253,11 @@ def scan(
 # ── deletion ────────────────────────────────────
 
 
-def delete_targets(targets: list[FoundTarget], console: Console) -> int:
+def delete_targets(
+    targets: list[FoundTarget],
+    console: Console,
+    on_progress: Callable[[FoundTarget], None] | None = None,
+) -> int:
     """Delete every target directory. Returns count of successfully removed dirs."""
     removed = 0
     for t in targets:
@@ -251,4 +266,7 @@ def delete_targets(targets: list[FoundTarget], console: Console) -> int:
             removed += 1
         except Exception as exc:
             console.print(f"  [red]✗  Failed to remove {t.path}: {exc}[/red]")
+        finally:
+            if on_progress:
+                on_progress(t)
     return removed
