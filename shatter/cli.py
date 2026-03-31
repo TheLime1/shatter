@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
+from typing import Optional
 
 import typer
 from rich import box
@@ -18,7 +19,7 @@ from rich.table import Table
 from rich.text import Text
 
 from . import __version__
-from .scanner import FoundTarget, ScanResult, delete_targets, format_size, scan
+from .scanner import FoundTarget, ScanResult, delete_targets, filter_older_than, format_size, parse_duration, scan
 
 app = typer.Typer(
     name="shatter",
@@ -186,7 +187,7 @@ def _verbose_table(result: ScanResult, fast: bool = False) -> Table:
     return table
 
 
-def _totals_panel(result: ScanResult, dry_run: bool, fast: bool = False) -> Panel:
+def _totals_panel(result: ScanResult, dry_run: bool, fast: bool = False, older_than: Optional[str] = None) -> Panel:
     lines: list[str] = []
     n_cache = sum(1 for t in result.targets if t.kind == "cache")
     n_dep = sum(1 for t in result.targets if t.kind == "dep")
@@ -217,6 +218,10 @@ def _totals_panel(result: ScanResult, dry_run: bool, fast: bool = False) -> Pane
             f"[bright_magenta]💎 Total:[/bright_magenta]    "
             f"[bold bright_white]{format_size(result.total_bytes)}[/bold bright_white]"
         )
+    if older_than:
+        lines.append("")
+        lines.append(
+            f"[dim]  🕐 Filter: not modified in last [bold]{older_than}[/bold][/dim]")
     if dry_run:
         lines.append("")
         lines.append(
@@ -259,6 +264,10 @@ def shatter(
     ),
     yes: bool = typer.Option(False, "--yes", "-y",
                              help="Skip confirmation prompt."),
+    older_than: Optional[str] = typer.Option(
+        None, "--older-than", "-o",
+        help="Only target dirs not modified within this period. E.g. [bold]30d[/bold], [bold]2w[/bold], [bold]3m[/bold], [bold]1y[/bold].",
+    ),
 ) -> None:
     """
     [bright_magenta]🔨 shatter[/bright_magenta] — Obliterate build caches & dependency bloat.
@@ -282,6 +291,16 @@ def shatter(
         raise typer.Exit(1)
 
     mode = "cache" if cache else ("deps" if deps else "all")
+
+    # ── validate --older-than ────────────────────
+    from datetime import timedelta
+    age_filter: Optional[timedelta] = None
+    if older_than is not None:
+        try:
+            age_filter = parse_duration(older_than)
+        except ValueError as exc:
+            console.print(f"[red]✗  {exc}[/red]\n")
+            raise typer.Exit(1)
 
     # ── phase 1: walk ────────────────────────────
     with LiveSpinner("Scanning…", style="bright_magenta") as spinner:
@@ -308,6 +327,17 @@ def shatter(
         scan_thread.join()
 
     assert result is not None
+
+    # ── apply --older-than filter ────────────────
+    if age_filter is not None:
+        before = len(result.targets)
+        result.targets = filter_older_than(result.targets, age_filter)
+        dropped = before - len(result.targets)
+        if dropped:
+            console.print(
+                f"  [dim]⏭  Filtered out [bold]{dropped}[/bold] dir(s) "
+                f"modified within the last [bold]{older_than}[/bold][/dim]"
+            )
 
     # ── empty ────────────────────────────────────
     if not result.targets:
@@ -336,7 +366,8 @@ def shatter(
         result, fast=fast) if verbose else _flat_table(result, fast=fast)
     console.print(table)
     console.print()
-    console.print(_totals_panel(result, dry_run, fast=fast))
+    console.print(_totals_panel(result, dry_run,
+                  fast=fast, older_than=older_than))
     console.print()
 
     if dry_run:

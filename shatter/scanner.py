@@ -12,9 +12,12 @@ Two-phase design for maximum speed:
 from __future__ import annotations
 
 import os
+import re
 import shutil
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Literal
 
@@ -104,6 +107,40 @@ def format_size(size_bytes: int) -> str:
             return f"{size_bytes:,.1f} {unit}"
         size_bytes /= 1024  # type: ignore[assignment]
     return f"{size_bytes:,.1f} PB"
+
+
+# ── duration helpers ─────────────────────────────
+
+_DURATION_RE = re.compile(r"^(\d+)\s*([dDmMyYwW])$")
+_UNIT_DAYS = {"d": 1, "w": 7, "m": 30, "y": 365}
+
+
+def parse_duration(value: str) -> timedelta:
+    """Parse a human duration string into a timedelta.
+
+    Accepted units: d (days), w (weeks), m (months ~30d), y (years ~365d).
+    Examples: '30d', '3m', '1y', '2w'.
+    """
+    m = _DURATION_RE.match(value.strip())
+    if not m:
+        raise ValueError(
+            f"Invalid duration {value!r}. Use e.g. '30d', '2w', '3m', '1y'."
+        )
+    n, unit = int(m.group(1)), m.group(2).lower()
+    return timedelta(days=n * _UNIT_DAYS[unit])
+
+
+def filter_older_than(targets: list[FoundTarget], max_age: timedelta) -> list[FoundTarget]:
+    """Return only targets whose directory mtime is older than max_age from now."""
+    cutoff = time.time() - max_age.total_seconds()
+    kept = []
+    for t in targets:
+        try:
+            if t.path.stat().st_mtime < cutoff:
+                kept.append(t)
+        except OSError:
+            pass
+    return kept
 
 
 # ── phase 1: walk ───────────────────────────────
