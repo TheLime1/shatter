@@ -1,189 +1,67 @@
-<div align="center">
-     
-<img width="1280" height="318" alt="Gemini_Generated_Image_rj2u2qrj2u2qrj2u (1) (Custom)" src="https://github.com/user-attachments/assets/3cb94e1d-08ba-436b-b347-362cb00b481c" />
+# ![Shatter](docs/banner.webp)
 
-**A cross-platform utility for safe, selective cleanup of build artifacts and dependency bloat.**
-
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-
-</div>
-
----
-
-`shatter` is a fast, multi-ecosystem CLI tool designed to safely reclaim disk space. It traverses your project directories to identify and remove stale build caches (`.next`, `__pycache__`, `.gradle`) and heavy dependency folders (`node_modules`, `.venv`, `target`). 
-
-Built for developers working across multiple languages, `shatter` replaces a dozen disparate cleanup scripts with one standardized, automation-friendly command.
-
-## Why `shatter`?
-
-| Feature                |            `shatter`             |       `npkill`        |   `find / rm`    |
-| :--------------------- | :------------------------------: | :-------------------: | :--------------: |
-| **Multi-Ecosystem**    |  ✅ (Rust, Python, JS, Go, etc.)  |      ❌ (JS only)      | ❌ (Manual setup) |
-| **Safety Guardrails**  |  ✅ (`.shatterignore`, dry-runs)  |           ❌           |        ❌         |
-| **Parallel Execution** |  ✅ (Threaded size calculation)   |           ❌           |        ❌         |
-| **CI/CD Ready**        | ✅ (Standard exit codes, `--yes`) | ❌ (Interactive focus) |        ✅         |
-
-## Core Features
-
-- 🛡️ **Safety-First Deletion** — includes a strict `--dry-run` mode to audit changes before any destructive action occurs.
-- ⚡ **IO-Optimized Discovery** — separates filesystem walking (BFS) from metadata retrieval (size calculation) using parallel threads to maximize throughput.
-- 🎯 **Targeted Scans** — isolate your cleanup to specific artifact types (`--cache` only, `--deps` only, or `--all`).
-- 🛑 **Directory Protection** — drop a `.shatterignore` file in any directory to completely exclude it and its children from the scan.
-- 🌍 **Universal Compatibility** — native support for JavaScript, Python, Rust, Go, PHP, Ruby, Java, .NET, Dart, and Expo.
-- 🤖 **POSIX-Compliant** — easily integratable into cron jobs or background scripts with non-interactive flags (`--yes`).
+Shatter shows how much space folders like `node_modules`, `.venv`, and `.next` take up across your projects. It lists the matching directories and their sizes, then asks before permanently deleting them.
 
 ## Install
 
-```bash
-# Clone the repository
-git clone [https://github.com/TheLime1/shatter.git](https://github.com/TheLime1/shatter.git)
-cd shatter
+With Git and Python 3.10 or later installed, run this in a Python environment you use for command-line tools.
 
-# Create a virtual environment and install
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
-pip install -e .
+```sh
+python -m pip install git+https://github.com/TheLime1/shatter.git
 ```
 
-> **Requires Python 3.10+**
+## First scan
 
-## Usage
+Preview the directories in your projects folder, grouped by repository. Replace `~/projects` with the folder you want to scan.
 
-```bash
-shatter [PATH] [OPTIONS]
-```
-
-`PATH` defaults to the current directory (`.`) if omitted.
-
-### Examples
-
-```bash
-# Audit mode: Preview targets and sizes without deleting anything (Recommended first step)
-shatter ~/projects --all --dry-run
-
-# Reclaim space from heavy dependencies (node_modules, .venv, target, vendor)
-shatter ~/projects --deps
-
-# Clear generated build caches (.next, __pycache__, .gradle)
-shatter ~/projects --cache
-
-# High-speed cleanup: Skip size calculations and delete immediately
-shatter ~/projects --all --fast
-
-# Detailed reporting: Group targets by project root with subtotals
+```sh
 shatter ~/projects --all --dry-run --verbose
-
-# Automated cleanup: Skip confirmation prompts for CI/CD or scripts
-shatter ~/projects --all --yes
-
-# Initialise (or reset) ~/.shatter with the built-in ecosystem defaults
-shatter init
 ```
 
-## CLI Commands
+To clean up old dependency folders, narrow the scan and preview it again. Once the list looks right, repeat the command without `--dry-run` and confirm at the prompt.
 
-| Command          | Description                                                    |
-| ---------------- | -------------------------------------------------------------- |
-| `shatter [PATH]` | Scan and optionally delete targets under `PATH` (default: `.`) |
-| `shatter init`   | (Re)write `~/.shatter` with all built-in ecosystem defaults    |
-
-## CLI Options
-
-| Flag           | Short | Description                                                                          |
-| -------------- | ----- | ------------------------------------------------------------------------------------ |
-| `--cache`      | `-c`  | Target build cache directories only                                                  |
-| `--deps`       | `-d`  | Target dependency directories only                                                   |
-| `--all`        | `-a`  | Target both caches and deps                                                          |
-| `--dry-run`    | `-n`  | Scan and report only — performs no disk mutations                                    |
-| `--fast`       | `-f`  | Skip parallel size calculation for immediate execution                               |
-| `--verbose`    | `-v`  | Group output by project root with localized size subtotals                           |
-| `--yes`        | `-y`  | Bypass interactive confirmation prompts                                              |
-| `--older-than` | `-o`  | Only target dirs not modified within the given period (e.g. `30d`, `2w`, `3m`, `1y`) |
-
-## Supported Ecosystems
-
-| Ecosystem          | Caches                                                              | Dependencies                 |
-| ------------------ | ------------------------------------------------------------------- | ---------------------------- |
-| **JavaScript**     | `.next` `.nuxt` `.svelte-kit` `.swc` `.turbo` `.parcel-cache`       | `node_modules`               |
-| **Python**         | `__pycache__` `.pytest_cache` `.mypy_cache` `.ruff_cache` `.pytype` | `.venv` `venv` `.tox` `.nox` |
-| **Rust**           | —                                                                   | `target`                     |
-| **Go**             | —                                                                   | `vendor`                     |
-| **PHP**            | —                                                                   | `vendor`                     |
-| **Ruby**           | —                                                                   | `vendor/bundle`              |
-| **Java / Kotlin**  | `.gradle` `build`                                                   | —                            |
-| **.NET / C#**      | `bin` `obj`                                                         | —                            |
-| **Expo**           | `.expo`                                                             | —                            |
-| **Dart / Flutter** | `.dart_tool` `build`                                                | —                            |
-
-## Protecting Critical Paths
-
-If you have vendor folders or specific node_modules you need to preserve, create an empty `.shatterignore` file in that directory's root:
-
-```bash
-touch ~/projects/legacy-api/.shatterignore
+```sh
+shatter ~/projects --deps --older-than 30d --dry-run
 ```
 
-`shatter` halts traversal upon detecting this file, ensuring the directory and its children remain untouched.
+The age filter uses the directory’s own modification time. Shatter matches directory names across all projects, so check generic names like `bin`, `build`, and `vendor` before confirming.
 
-```text
-  ⏭  Skipped legacy-api (found .shatterignore)
-```
+## Options
 
-## Architecture & Extensibility
+The scan path defaults to the current directory. Choose one target flag per scan.
 
-`shatter` is built to be easily extensible. You can add support for new languages or frameworks without touching the source code at all.
+| Target | Examples |
+| --- | --- |
+| `-c`, `--cache` | `.next`, `__pycache__`, `.gradle`, `CMakeFiles`, `.godot` |
+| `-d`, `--deps` | `node_modules`, `.venv`, `vendor`, `Pods` |
+| `-a`, `--all` | Both groups |
 
-```text
-shatter/
-├── __init__.py       # package versioning
-├── __main__.py       # execution entry point
-├── targets.py        # ecosystem loader (reads ~/.shatter)
-├── scanner.py        # core BFS walk + threaded size engine
-└── cli.py            # terminal UI and argument parsing
-```
+| Option | Effect |
+| --- | --- |
+| `-n`, `--dry-run` | List matches and exit before deletion. |
+| `-v`, `--verbose` | Group matches by project and show subtotals. |
+| `-f`, `--fast` | Skip size calculations and report directory counts. |
+| `-o`, `--older-than` | Filter by age, for example `30d`, `2w`, `3m`, or `1y`. |
+| `-y`, `--yes` | Delete matches without asking for confirmation. |
 
-### User Config — `~/.shatter`
+## Exclude a project
 
-On first run, `shatter` creates `~/.shatter` in your home directory populated with all built-in ecosystem definitions. Open it with any text editor to customise targets:
+Place an empty file named `.shatterignore` at the root of a project you want to keep. For example, `~/projects/client-app/.shatterignore` makes Shatter skip that project when scanning `~/projects`.
 
-```json
-{
-  "ECOSYSTEMS": [
-    {
-      "name": "JavaScript",
-      "caches": [".next", ".nuxt", "dist", "build"],
-      "deps": ["node_modules", "bower_components"]
-    },
-    {
-      "name": "Python",
-      "caches": ["__pycache__", ".pytest_cache", ".mypy_cache"],
-      "deps": [".venv", "venv", ".tox"]
-    }
-  ]
-}
-```
+Put the marker **above** any matching directory you want to keep. Shatter selects a directory such as `node_modules` before looking inside it, so a marker inside `node_modules` comes too late.
 
-- **Add** a new object to the `ECOSYSTEMS` array to support a new language.
-- **Remove** any entry you don't want scanned.
-- **Customise** `caches` or `deps` arrays to match your workflow.
+## Customize directory names
 
-Changes take effect on the next run — no reinstall needed. If the file is deleted or becomes malformed, `shatter` will recreate it with the built-in defaults.
+Shatter writes its defaults to `~/.shatter` on first use. Edit the `caches` and `deps` lists in that JSON file to change what the next scan picks up. Use individual directory names. To replace your edits with the built-in defaults, run `shatter init`.
 
-## Contributing
+The [built-in list](shatter/targets.py) includes web frameworks, compilers, and game engines. To contribute a default, include the directory name, what creates it, and how to regenerate its contents.
 
-We welcome pull requests for new ecosystems, bug fixes, or performance optimizations. 
+<details>
+<summary>Example terminal output</summary>
 
-1. Fork the repository.
-2. If adding a built-in ecosystem default, update `_DEFAULT_ECOSYSTEMS` in `targets.py`.
-3. Submit a PR with a brief description and a reference link confirming the standard directory names for that ecosystem.
+![Scan results grouped by project, with sizes for individual dependency folders](https://github.com/user-attachments/assets/11c93f6f-a002-4649-b23b-f2c72682318e)
+![Dry-run summary showing 3.6 GB of caches and 58.0 GB of dependencies](https://github.com/user-attachments/assets/0882c89f-7eb9-42f6-8a6d-aac26a77f5c6)
 
-## License
+</details>
 
-MIT © 2026 Aymen Hmani
-
-## Output Previews
-
-<img width="811" height="380" alt="Antigravity_YXlYhz6RGP" src="https://github.com/user-attachments/assets/11c93f6f-a002-4649-b23b-f2c72682318e" />
-<img width="975" height="242" alt="Antigravity_Cvhe8yfEf2" src="https://github.com/user-attachments/assets/0882c89f-7eb9-42f6-8a6d-aac26a77f5c6" />
+[MIT License](LICENSE) © 2026 Aymen Hmani
