@@ -39,7 +39,7 @@ class DefaultGroup(TyperGroup):
 
 app = typer.Typer(
     name="shatter",
-    help="🔨 Recursively find and obliterate build caches & dependency bloat.",
+    help="Find and remove build caches and dependency directories.",
     add_completion=False,
     cls=DefaultGroup,
     no_args_is_help=True,
@@ -295,7 +295,7 @@ FastOpt = Annotated[
     typer.Option(
         "--fast",
         "-f",
-        help="Skip size calculation — instant results, no byte totals.",
+        help="Skip size calculations and report directory counts.",
     ),
 ]
 YesOpt = Annotated[
@@ -345,10 +345,9 @@ def shatter(
     older_than: OlderThanOpt = None,
 ) -> None:
     """
-    [bright_magenta]🔨 shatter[/bright_magenta] — Obliterate build caches & dependency bloat.
+    Find build caches and dependency directories under PATH.
 
-    Scans the given directory recursively. Stops descending past project roots
-    (.git boundaries) to stay fast. Computes sizes in parallel.
+    Choose --cache, --deps, or --all. Use --dry-run to preview the matches.
     """
     _print_banner()
 
@@ -440,7 +439,7 @@ def shatter(
         else:
             console.print(
                 Panel(
-                    "[bright_green]✨ Nothing to clean — your project tree is spotless![/bright_green]",
+                    "[bright_green]No matching directories found.[/bright_green]",
                     border_style="green",
                     padding=(1, 2),
                 )
